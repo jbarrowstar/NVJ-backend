@@ -1,0 +1,65 @@
+{
+  "name": "nirvaha_pos",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "scripts": {
+    "electron": "electron electron/main.js",
+    "frontend:build": "cd frontend && npm run build",
+    "build": "npm run frontend:build && electron-builder",
+    "dist": "npm run frontend:build && electron-builder --publish=never",
+    "build-win": "npm run frontend:build && electron-builder --win",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^38.4.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.nirvaha.pos",
+    "productName": "Nirvaha POS",
+    "directories": {
+      "buildResources": "assets",
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "frontend/dist/**/*",
+      "frontend/src/assets/logo.ico"
+    ],
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "frontend/src/assets/logo.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "frontend/src/assets/logo.ico",
+      "uninstallerIcon": "frontend/src/assets/logo.ico",
+      "installerHeaderIcon": "frontend/src/assets/logo.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "frontend/src/assets/logo.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "frontend/src/assets/logo.icns"
+    }
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.928.0",
+    "@aws-sdk/lib-storage": "^3.928.0",
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.19.2",
+    "multer": "^2.0.2"
+  }
+}
