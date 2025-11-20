@@ -14,15 +14,17 @@ const orderSchema = new mongoose.Schema({
       price: Number,
       qty: Number,
       sku: String,
-      category: String, // ADDED
-      metal: String, // ADDED
-      costPrice: Number, // ADDED
-      metalWeight: { type: Number, default: 0 }, // ADDED: metal weight in grams
-      stoneWeight: { type: Number, default: 0 }, // ADDED: stone weight in grams
-      netWeight: { type: Number, default: 0 }, // ADDED: total weight in grams
+      category: String,
+      metal: String,
+      costPrice: Number,
+      metalWeight: { type: Number, default: 0 },
+      stoneWeight: { type: Number, default: 0 },
+      netWeight: { type: Number, default: 0 },
+      makingCharges: { type: Number, default: 0 },
+      wastage: { type: Number, default: 0 },
+      stonePrice: { type: Number, default: 0 },
     },
   ],
-  // Updated payment fields for multiple payment methods
   paymentMethods: [{
     method: { 
       type: String, 
@@ -35,7 +37,6 @@ const orderSchema = new mongoose.Schema({
       min: 0
     }
   }],
-  // Keep paymentMode for backward compatibility (optional)
   paymentMode: String,
   subtotal: Number,
   discount: Number,
