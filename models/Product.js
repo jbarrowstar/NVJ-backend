@@ -5,9 +5,9 @@ const productSchema = new mongoose.Schema({
   sku: { type: String, required: true, unique: true, index: true, trim: true },
   category: { type: String, trim: true, default: '' },
   metal: { type: String, enum: ['gold', 'silver'], required: true },
-  weight: { type: String, trim: true, default: '' }, // metal weight in grams
-  stoneWeight: { type: String, trim: true, default: '' }, // stone weight in grams
-  netWeight: { type: String, trim: true, default: '' }, // total weight = metal + stone in grams
+  weight: { type: Number, default: 0 }, // metal weight in grams - CHANGED TO NUMBER
+  stoneWeight: { type: Number, default: 0 }, // stone weight in grams - CHANGED TO NUMBER
+  netWeight: { type: Number, default: 0 }, // total weight = metal + stone in grams - CHANGED TO NUMBER
   purity: { type: String, trim: true, default: '' },  // e.g. "22K"
   makingCharges: { type: Number, default: 0, min: 0 },
   wastage: { type: Number, default: 0, min: 0 }, // percent

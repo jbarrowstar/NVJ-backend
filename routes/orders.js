@@ -27,8 +27,57 @@ router.post('/', async (req, res) => {
       ? req.body.paymentMethods.reduce((sum, payment) => sum + (payment.amount || 0), 0)
       : 0;
 
+    // Process items to include weight data from products
+    const processedItems = await Promise.all(
+      req.body.items.map(async (item) => {
+        try {
+          // Fetch product details to get weight data
+          const product = await Product.findOne({ sku: item.sku });
+          
+          if (product) {
+            return {
+              name: item.name,
+              price: item.price,
+              qty: item.qty,
+              sku: item.sku,
+              category: product.category || '',
+              metal: product.metal || '',
+              costPrice: product.costPrice || 0,
+              metalWeight: product.weight || 0, // ADDED: from product
+              stoneWeight: product.stoneWeight || 0, // ADDED: from product
+              netWeight: product.netWeight || 0, // ADDED: from product
+            };
+          } else {
+            // If product not found, use item data without weights
+            return {
+              ...item,
+              category: item.category || '',
+              metal: item.metal || '',
+              costPrice: item.costPrice || 0,
+              metalWeight: item.metalWeight || 0,
+              stoneWeight: item.stoneWeight || 0,
+              netWeight: item.netWeight || 0,
+            };
+          }
+        } catch (error) {
+          console.error(`Error processing item ${item.sku}:`, error);
+          // Return item with default weights if there's an error
+          return {
+            ...item,
+            category: item.category || '',
+            metal: item.metal || '',
+            costPrice: item.costPrice || 0,
+            metalWeight: item.metalWeight || 0,
+            stoneWeight: item.stoneWeight || 0,
+            netWeight: item.netWeight || 0,
+          };
+        }
+      })
+    );
+
     const newOrder = new Order({
       ...req.body,
+      items: processedItems, // Use processed items with weight data
       orderId,
       invoiceNumber,
       // Set paymentMode for backward compatibility (use first method or 'Multiple')
@@ -211,9 +260,58 @@ router.get('/customer/:phone', async (req, res) => {
 // PUT /api/orders/:id
 router.put('/:id', async (req, res) => {
   try {
+    // If updating items, process them to include weight data
+    let updates = { ...req.body };
+    
+    if (req.body.items) {
+      updates.items = await Promise.all(
+        req.body.items.map(async (item) => {
+          try {
+            const product = await Product.findOne({ sku: item.sku });
+            
+            if (product) {
+              return {
+                name: item.name,
+                price: item.price,
+                qty: item.qty,
+                sku: item.sku,
+                category: product.category || '',
+                metal: product.metal || '',
+                costPrice: product.costPrice || 0,
+                metalWeight: product.weight || 0,
+                stoneWeight: product.stoneWeight || 0,
+                netWeight: product.netWeight || 0,
+              };
+            } else {
+              return {
+                ...item,
+                category: item.category || '',
+                metal: item.metal || '',
+                costPrice: item.costPrice || 0,
+                metalWeight: item.metalWeight || 0,
+                stoneWeight: item.stoneWeight || 0,
+                netWeight: item.netWeight || 0,
+              };
+            }
+          } catch (error) {
+            console.error(`Error processing item ${item.sku}:`, error);
+            return {
+              ...item,
+              category: item.category || '',
+              metal: item.metal || '',
+              costPrice: item.costPrice || 0,
+              metalWeight: item.metalWeight || 0,
+              stoneWeight: item.stoneWeight || 0,
+              netWeight: item.netWeight || 0,
+            };
+          }
+        })
+      );
+    }
+
     const order = await Order.findByIdAndUpdate(
       req.params.id,
-      { ...req.body },
+      updates,
       { new: true, runValidators: true }
     );
     

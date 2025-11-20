@@ -159,6 +159,13 @@ const sanitizeCategoryPrefix = (category = '') => {
   return prefix.length === 3 ? prefix : (prefix + 'GEN').slice(0, 3);
 };
 
+// Helper function to parse weight values
+const parseWeight = (value) => {
+  if (value === undefined || value === null || value === '') return 0;
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+};
+
 // Create product with stone weight and net weight
 router.post('/', async (req, res) => {
   try {
@@ -178,25 +185,25 @@ router.post('/', async (req, res) => {
     const sku = `${prefix}-${yyyymm}-${serial}`;
     const qrCode = `QR-${sku}`;
 
-    // Calculate net weight if not provided
-    const calculatedNetWeight = netWeight || (() => {
-      const metalWt = parseFloat(weight || '0') || 0;
-      const stoneWt = parseFloat(stoneWeight || '0') || 0;
-      return (metalWt + stoneWt).toFixed(2);
-    })();
+    // Parse weight values as numbers
+    const metalWt = parseWeight(weight);
+    const stoneWt = parseWeight(stoneWeight);
+    
+    // Calculate net weight as number
+    const calculatedNetWeight = netWeight ? parseWeight(netWeight) : (metalWt + stoneWt);
 
     const payload = {
       name,
       category,
       metal: metal || 'gold',
-      weight: weight || '',
-      stoneWeight: stoneWeight || '',
-      netWeight: calculatedNetWeight,
+      weight: metalWt, // Store as number
+      stoneWeight: stoneWt, // Store as number
+      netWeight: calculatedNetWeight, // Store as number
       purity: purity || '',
-      makingCharges: makingCharges ?? 0,
-      wastage: wastage ?? 0,
-      stonePrice: stonePrice ?? 0,
-      price: price ?? 0,
+      makingCharges: parseWeight(makingCharges),
+      wastage: parseWeight(wastage),
+      stonePrice: parseWeight(stonePrice),
+      price: parseWeight(price),
       description: description || '',
       image: image || '',
       sku,
@@ -218,12 +225,29 @@ router.put('/:id', async (req, res) => {
   try {
     const updates = { ...req.body };
     
+    // Parse weight values to ensure they are numbers
+    if (updates.weight !== undefined) {
+      updates.weight = parseWeight(updates.weight);
+    }
+    if (updates.stoneWeight !== undefined) {
+      updates.stoneWeight = parseWeight(updates.stoneWeight);
+    }
+    if (updates.netWeight !== undefined) {
+      updates.netWeight = parseWeight(updates.netWeight);
+    }
+    
     // Ensure net weight is calculated if weight or stoneWeight is updated
     if (updates.weight !== undefined || updates.stoneWeight !== undefined) {
-      const metalWeight = parseFloat(updates.weight || '0') || 0;
-      const stoneWeight = parseFloat(updates.stoneWeight || '0') || 0;
-      updates.netWeight = (metalWeight + stoneWeight).toFixed(2);
+      const metalWeight = updates.weight !== undefined ? updates.weight : parseWeight(req.body.weight);
+      const stoneWeight = updates.stoneWeight !== undefined ? updates.stoneWeight : parseWeight(req.body.stoneWeight);
+      updates.netWeight = metalWeight + stoneWeight; // Store as number
     }
+
+    // Parse other numeric fields
+    if (updates.makingCharges !== undefined) updates.makingCharges = parseWeight(updates.makingCharges);
+    if (updates.wastage !== undefined) updates.wastage = parseWeight(updates.wastage);
+    if (updates.stonePrice !== undefined) updates.stonePrice = parseWeight(updates.stonePrice);
+    if (updates.price !== undefined) updates.price = parseWeight(updates.price);
 
     const updated = await Product.findByIdAndUpdate(req.params.id, updates, { 
       new: true, 
