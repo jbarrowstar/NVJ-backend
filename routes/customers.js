@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 // POST - Check for duplicate phone number
 router.post('/', async (req, res) => {
   try {
-    const { name, phone, email, notes } = req.body;
+    const { name, phone, email, gstNumber, notes } = req.body;
 
     // Validate required fields
     if (!name || !phone) {
@@ -42,6 +42,7 @@ router.post('/', async (req, res) => {
       name: name.trim(),
       phone: phone.trim(),
       email: email ? email.trim() : '',
+      gstNumber: gstNumber ? gstNumber.trim() : '',
       notes: notes ? notes.trim() : '',
     });
 
@@ -82,7 +83,7 @@ router.post('/', async (req, res) => {
 // UPDATE customer - Check for duplicate phone number (excluding current customer)
 router.put('/:id', async (req, res) => {
   try {
-    const { name, phone, email, notes } = req.body;
+    const { name, phone, email, gstNumber, notes } = req.body;
 
     // Validate required fields
     if (!name || !phone) {
@@ -111,6 +112,7 @@ router.put('/:id', async (req, res) => {
         name: name.trim(),
         phone: phone.trim(),
         email: email ? email.trim() : '',
+        gstNumber: gstNumber ? gstNumber.trim() : '',
         notes: notes ? notes.trim() : '',
       }, 
       {

@@ -1,3 +1,4 @@
+
 const mongoose = require('mongoose');
 
 const customerSchema = new mongoose.Schema({
@@ -16,6 +17,10 @@ const customerSchema = new mongoose.Schema({
     type: String, 
     trim: true,
     lowercase: true
+  },
+  gstNumber: { 
+    type: String,
+    trim: true
   },
   notes: { 
     type: String, 
