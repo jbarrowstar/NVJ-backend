@@ -1,4 +1,3 @@
-
 const mongoose = require('mongoose');
 
 const customerSchema = new mongoose.Schema({
@@ -10,7 +9,7 @@ const customerSchema = new mongoose.Schema({
   phone: { 
     type: String, 
     required: true,
-    unique: true, // Enforce unique phone numbers
+    unique: true,
     trim: true
   },
   email: { 
@@ -22,9 +21,13 @@ const customerSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  notes: { 
-    type: String, 
-    trim: true 
+  aadharNumber: {
+    type: String,
+    trim: true
+  },
+  panNumber: {
+    type: String,
+    trim: true
   },
   createdAt: { 
     type: Date, 

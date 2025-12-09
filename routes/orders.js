@@ -27,6 +27,26 @@ router.post('/', async (req, res) => {
       ? req.body.paymentMethods.reduce((sum, payment) => sum + (payment.amount || 0), 0)
       : 0;
 
+    // Process payment methods to ensure gold exchange details are properly structured
+    const processedPaymentMethods = req.body.paymentMethods ? req.body.paymentMethods.map(payment => {
+      // Ensure goldExchange object exists for Gold Exchange payments
+      if (payment.method === 'Gold Exchange') {
+        return {
+          method: payment.method,
+          amount: payment.amount,
+          goldExchange: payment.goldExchange || {
+            weight: 0,
+            goldRatePerGram: 6000,
+            calculatedAmount: payment.amount || 0
+          }
+        };
+      }
+      return {
+        ...payment,
+        goldExchange: undefined // Remove goldExchange for non-gold payments
+      };
+    }) : [];
+
     // Process items to include weight data and additional fields from products
     const processedItems = await Promise.all(
       req.body.items.map(async (item) => {
@@ -87,6 +107,7 @@ router.post('/', async (req, res) => {
     const newOrder = new Order({
       ...req.body,
       items: processedItems, // Use processed items with all data
+      paymentMethods: processedPaymentMethods, // Use processed payment methods
       orderId,
       invoiceNumber,
       // Set paymentMode for backward compatibility (use first method or 'Multiple')
@@ -269,9 +290,30 @@ router.get('/customer/:phone', async (req, res) => {
 // PUT /api/orders/:id
 router.put('/:id', async (req, res) => {
   try {
-    // If updating items, process them to include weight data and additional fields
+    // If updating payment methods, process gold exchange details
     let updates = { ...req.body };
     
+    if (req.body.paymentMethods) {
+      updates.paymentMethods = req.body.paymentMethods.map(payment => {
+        if (payment.method === 'Gold Exchange') {
+          return {
+            method: payment.method,
+            amount: payment.amount,
+            goldExchange: payment.goldExchange || {
+              weight: 0,
+              goldRatePerGram: 6000,
+              calculatedAmount: payment.amount || 0
+            }
+          };
+        }
+        return {
+          ...payment,
+          goldExchange: undefined
+        };
+      });
+    }
+    
+    // If updating items, process them to include weight data and additional fields
     if (req.body.items) {
       updates.items = await Promise.all(
         req.body.items.map(async (item) => {

@@ -8,6 +8,8 @@ const orderSchema = new mongoose.Schema({
     phone: String,
     email: String,
     gstNumber: String,
+    aadharNumber: String,
+    panNumber: String,
   },
   items: [
     {
@@ -29,7 +31,7 @@ const orderSchema = new mongoose.Schema({
   paymentMethods: [{
     method: { 
       type: String, 
-      enum: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Wallet'],
+      enum: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Gold Exchange'],
       required: true 
     },
     amount: { 

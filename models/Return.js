@@ -19,7 +19,7 @@ const returnSchema = new mongoose.Schema({
   grandTotal: Number,
   returnReason: String,
   returnType: String,
-  returnType: String,
+  returnWeight: Number, // Added returnWeight field
   returnDate: String,
   returnTime: String,
   status: { type: String, default: 'Completed' },

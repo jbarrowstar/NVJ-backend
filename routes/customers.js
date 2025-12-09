@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
 // POST - Check for duplicate phone number
 router.post('/', async (req, res) => {
   try {
-    const { name, phone, email, gstNumber, notes } = req.body;
+    const { name, phone, email, gstNumber, aadharNumber, panNumber } = req.body;
 
     // Validate required fields
     if (!name || !phone) {
@@ -43,7 +43,8 @@ router.post('/', async (req, res) => {
       phone: phone.trim(),
       email: email ? email.trim() : '',
       gstNumber: gstNumber ? gstNumber.trim() : '',
-      notes: notes ? notes.trim() : '',
+      aadharNumber: aadharNumber ? aadharNumber.trim() : '',
+      panNumber: panNumber ? panNumber.trim() : '',
     });
 
     await newCustomer.save();
@@ -83,7 +84,7 @@ router.post('/', async (req, res) => {
 // UPDATE customer - Check for duplicate phone number (excluding current customer)
 router.put('/:id', async (req, res) => {
   try {
-    const { name, phone, email, gstNumber, notes } = req.body;
+    const { name, phone, email, gstNumber, aadharNumber, panNumber } = req.body;
 
     // Validate required fields
     if (!name || !phone) {
@@ -113,7 +114,8 @@ router.put('/:id', async (req, res) => {
         phone: phone.trim(),
         email: email ? email.trim() : '',
         gstNumber: gstNumber ? gstNumber.trim() : '',
-        notes: notes ? notes.trim() : '',
+        aadharNumber: aadharNumber ? aadharNumber.trim() : '',
+        panNumber: panNumber ? panNumber.trim() : '',
       }, 
       {
         new: true,
