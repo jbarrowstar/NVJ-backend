@@ -11,6 +11,10 @@ const returnRoutes = require('./routes/returns');
 const categoryRoutes = require('./routes/category');
 const rateRoutes = require('./routes/rates');
 
+// Add these imports for chits
+const chitRoutes = require('./routes/chits');
+const chitPaymentRoutes = require('./routes/chitPayments');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -26,9 +30,10 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/returns', returnRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/rates', rateRoutes);
+app.use('/api/chits', chitRoutes);
+app.use('/api/chit-payments', chitPaymentRoutes);
 
 app.use('/uploads', express.static('uploads'));
-
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT,"0.0.0.0", () => console.log(`🚀 Backend running on port ${PORT}`));

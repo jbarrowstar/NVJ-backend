@@ -31,13 +31,27 @@ const orderSchema = new mongoose.Schema({
   paymentMethods: [{
     method: { 
       type: String, 
-      enum: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Gold Exchange'],
+      enum: ['Cash', 'Card', 'UPI', 'Bank Transfer', 'Gold Exchange', 'Chit Settlement'],
       required: true 
     },
     amount: { 
       type: Number, 
       required: true,
       min: 0
+    },
+    goldExchange: {
+      weight: Number,
+      goldRatePerGram: Number,
+      calculatedAmount: Number,
+    },
+    chitSettlement: {
+      chitId: String,
+      chitNumber: String,
+      customerName: String,
+      customerPhone: String,
+      accumulatedGold: Number,
+      chitAmount: Number,
+      paidAmount: Number,
     }
   }],
   paymentMode: String,
@@ -47,6 +61,13 @@ const orderSchema = new mongoose.Schema({
   grandTotal: Number,
   date: String,
   time: String,
+  // Add chit settlement reference
+  chitSettlement: {
+    chitId: String,
+    chitNumber: String,
+    settlementAmount: Number,
+    settlementType: String,
+  },
   createdAt: { type: Date, default: Date.now },
 });
 

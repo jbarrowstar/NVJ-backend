@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
       ? req.body.paymentMethods.reduce((sum, payment) => sum + (payment.amount || 0), 0)
       : 0;
 
-    // Process payment methods to ensure gold exchange details are properly structured
+    // Process payment methods to ensure proper structure
     const processedPaymentMethods = req.body.paymentMethods ? req.body.paymentMethods.map(payment => {
       // Ensure goldExchange object exists for Gold Exchange payments
       if (payment.method === 'Gold Exchange') {
@@ -41,9 +41,29 @@ router.post('/', async (req, res) => {
           }
         };
       }
+      // Ensure chitSettlement object exists for Chit Settlement payments
+      if (payment.method === 'Chit Settlement') {
+        return {
+          method: payment.method,
+          amount: payment.amount,
+          chitSettlement: payment.chitSettlement || {
+            chitId: '',
+            chitNumber: '',
+            customerName: '',
+            customerPhone: '',
+            accumulatedGold: 0,
+            chitAmount: 0,
+            paidAmount: 0,
+            currentGoldRate: req.body.chitSettlement?.goldPricePerGram || 6000,
+            goldValue: 0,
+            extraAmount: 0
+          }
+        };
+      }
       return {
         ...payment,
-        goldExchange: undefined // Remove goldExchange for non-gold payments
+        goldExchange: undefined, // Remove goldExchange for non-gold payments
+        chitSettlement: undefined // Remove chitSettlement for non-chit payments
       };
     }) : [];
 
@@ -104,12 +124,40 @@ router.post('/', async (req, res) => {
       })
     );
 
+    // Calculate gold value and extra amount for chit settlements
+    const processedPaymentMethodsWithCalculations = processedPaymentMethods.map(payment => {
+      if (payment.method === 'Chit Settlement' && payment.chitSettlement) {
+        const chitData = payment.chitSettlement;
+        const goldRate = chitData.currentGoldRate || req.body.chitSettlement?.goldPricePerGram || 6000;
+        const goldWeight = chitData.accumulatedGold || 0;
+        const goldValue = goldWeight * goldRate;
+        const extraAmount = payment.amount - goldValue;
+        
+        return {
+          ...payment,
+          chitSettlement: {
+            ...chitData,
+            currentGoldRate: goldRate,
+            goldValue: goldValue,
+            extraAmount: extraAmount > 0 ? extraAmount : 0,
+            remainingAmount: (chitData.chitAmount || 0) - (chitData.paidAmount || 0) - payment.amount
+          }
+        };
+      }
+      return payment;
+    });
+
     const newOrder = new Order({
       ...req.body,
       items: processedItems, // Use processed items with all data
-      paymentMethods: processedPaymentMethods, // Use processed payment methods
+      paymentMethods: processedPaymentMethodsWithCalculations, // Use processed payment methods with calculations
       orderId,
       invoiceNumber,
+      // Include chit settlement data if provided
+      chitSettlement: req.body.chitSettlement ? {
+        ...req.body.chitSettlement,
+        goldPricePerGram: req.body.chitSettlement.goldPricePerGram || 6000
+      } : undefined,
       // Set paymentMode for backward compatibility (use first method or 'Multiple')
       paymentMode: req.body.paymentMethods && req.body.paymentMethods.length > 0 
         ? req.body.paymentMethods.length === 1 
@@ -165,7 +213,7 @@ router.post('/', async (req, res) => {
 // GET /api/orders
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 50, customer, date } = req.query;
+    const { page = 1, limit = 50, customer, date, paymentMethod } = req.query;
     
     let query = {};
     
@@ -177,6 +225,11 @@ router.get('/', async (req, res) => {
     // Filter by date
     if (date) {
       query.date = date;
+    }
+    
+    // Filter by payment method
+    if (paymentMethod) {
+      query['paymentMethods.method'] = paymentMethod;
     }
     
     const orders = await Order.find(query)
@@ -287,10 +340,34 @@ router.get('/customer/:phone', async (req, res) => {
   }
 });
 
+// GET /api/orders/chit/:chitNumber
+router.get('/chit/:chitNumber', async (req, res) => {
+  try {
+    const orders = await Order.find({
+      $or: [
+        { 'paymentMethods.chitSettlement.chitNumber': req.params.chitNumber },
+        { 'chitSettlement.chitNumber': req.params.chitNumber }
+      ]
+    }).sort({ createdAt: -1 });
+    
+    res.json({ 
+      success: true, 
+      orders,
+      total: orders.length 
+    });
+  } catch (err) {
+    console.error('Chit orders fetch error:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while fetching chit orders' 
+    });
+  }
+});
+
 // PUT /api/orders/:id
 router.put('/:id', async (req, res) => {
   try {
-    // If updating payment methods, process gold exchange details
+    // If updating payment methods, process them properly
     let updates = { ...req.body };
     
     if (req.body.paymentMethods) {
@@ -306,9 +383,26 @@ router.put('/:id', async (req, res) => {
             }
           };
         }
+        if (payment.method === 'Chit Settlement') {
+          return {
+            method: payment.method,
+            amount: payment.amount,
+            chitSettlement: payment.chitSettlement || {
+              chitId: '',
+              chitNumber: '',
+              customerName: '',
+              customerPhone: '',
+              accumulatedGold: 0,
+              chitAmount: 0,
+              paidAmount: 0,
+              currentGoldRate: req.body.chitSettlement?.goldPricePerGram || 6000
+            }
+          };
+        }
         return {
           ...payment,
-          goldExchange: undefined
+          goldExchange: undefined,
+          chitSettlement: undefined
         };
       });
     }
@@ -369,6 +463,31 @@ router.put('/:id', async (req, res) => {
       );
     }
 
+    // Calculate gold value and extra amount for chit settlements in updates
+    if (updates.paymentMethods) {
+      updates.paymentMethods = updates.paymentMethods.map(payment => {
+        if (payment.method === 'Chit Settlement' && payment.chitSettlement) {
+          const chitData = payment.chitSettlement;
+          const goldRate = chitData.currentGoldRate || updates.chitSettlement?.goldPricePerGram || 6000;
+          const goldWeight = chitData.accumulatedGold || 0;
+          const goldValue = goldWeight * goldRate;
+          const extraAmount = payment.amount - goldValue;
+          
+          return {
+            ...payment,
+            chitSettlement: {
+              ...chitData,
+              currentGoldRate: goldRate,
+              goldValue: goldValue,
+              extraAmount: extraAmount > 0 ? extraAmount : 0,
+              remainingAmount: (chitData.chitAmount || 0) - (chitData.paidAmount || 0) - payment.amount
+            }
+          };
+        }
+        return payment;
+      });
+    }
+
     const order = await Order.findByIdAndUpdate(
       req.params.id,
       updates,
@@ -380,6 +499,15 @@ router.put('/:id', async (req, res) => {
         success: false, 
         message: 'Order not found' 
       });
+    }
+    
+    // If updating chit settlement, update the top-level chitSettlement field
+    if (req.body.chitSettlement) {
+      order.chitSettlement = {
+        ...req.body.chitSettlement,
+        goldPricePerGram: req.body.chitSettlement.goldPricePerGram || 6000
+      };
+      await order.save();
     }
     
     res.json({ 
@@ -451,6 +579,103 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Server error while deleting order' 
+    });
+  }
+});
+
+// GET /api/orders/summary/daily
+router.get('/summary/daily', async (req, res) => {
+  try {
+    const { date } = req.query;
+    
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: 'Date parameter is required'
+      });
+    }
+    
+    const orders = await Order.find({ date: date });
+    
+    const summary = {
+      totalOrders: orders.length,
+      totalRevenue: orders.reduce((sum, order) => sum + order.grandTotal, 0),
+      paymentMethods: {},
+      chitSettlements: orders.filter(order => 
+        order.paymentMethods?.some(p => p.method === 'Chit Settlement')
+      ).length,
+      goldExchanges: orders.filter(order => 
+        order.paymentMethods?.some(p => p.method === 'Gold Exchange')
+      ).length
+    };
+    
+    // Calculate payment method breakdown
+    orders.forEach(order => {
+      order.paymentMethods?.forEach(payment => {
+        const method = payment.method;
+        if (!summary.paymentMethods[method]) {
+          summary.paymentMethods[method] = 0;
+        }
+        summary.paymentMethods[method] += payment.amount;
+      });
+    });
+    
+    res.json({
+      success: true,
+      summary,
+      date
+    });
+  } catch (err) {
+    console.error('Daily summary error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while fetching daily summary'
+    });
+  }
+});
+
+// GET /api/orders/search
+router.get('/search', async (req, res) => {
+  try {
+    const { q, startDate, endDate, limit = 20 } = req.query;
+    
+    let query = {};
+    
+    if (q) {
+      const searchRegex = { $regex: q, $options: 'i' };
+      query.$or = [
+        { invoiceNumber: searchRegex },
+        { orderId: searchRegex },
+        { 'customer.name': searchRegex },
+        { 'customer.phone': searchRegex },
+        { 'customer.email': searchRegex },
+        { 'items.name': searchRegex },
+        { 'items.sku': searchRegex },
+        { 'chitSettlement.chitNumber': searchRegex }
+      ];
+    }
+    
+    if (startDate && endDate) {
+      query.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      };
+    }
+    
+    const orders = await Order.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+    
+    res.json({
+      success: true,
+      orders,
+      total: orders.length
+    });
+  } catch (err) {
+    console.error('Order search error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while searching orders'
     });
   }
 });
