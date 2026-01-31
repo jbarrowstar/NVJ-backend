@@ -82,6 +82,7 @@ router.post('/', async (req, res) => {
               sku: item.sku,
               category: product.category || '',
               metal: product.metal || '',
+              purity: product.purity || '',
               costPrice: product.costPrice || 0,
               metalWeight: product.weight || 0,
               stoneWeight: product.stoneWeight || 0,
@@ -96,6 +97,7 @@ router.post('/', async (req, res) => {
               ...item,
               category: item.category || '',
               metal: item.metal || '',
+              purity: item.purity || '',
               costPrice: item.costPrice || 0,
               metalWeight: item.metalWeight || 0,
               stoneWeight: item.stoneWeight || 0,
@@ -112,6 +114,7 @@ router.post('/', async (req, res) => {
             ...item,
             category: item.category || '',
             metal: item.metal || '',
+            purity: item.purity || '',
             costPrice: item.costPrice || 0,
             metalWeight: item.metalWeight || 0,
             stoneWeight: item.stoneWeight || 0,
@@ -153,6 +156,8 @@ router.post('/', async (req, res) => {
       paymentMethods: processedPaymentMethodsWithCalculations, // Use processed payment methods with calculations
       orderId,
       invoiceNumber,
+      // Include advanceAmount if provided
+      advanceAmount: req.body.advanceAmount || 0,
       // Include chit settlement data if provided
       chitSettlement: req.body.chitSettlement ? {
         ...req.body.chitSettlement,
@@ -177,10 +182,14 @@ router.post('/', async (req, res) => {
       );
     }
 
+    // Calculate total due including advance
+    const totalDue = newOrder.grandTotal + (newOrder.advanceAmount || 0);
+    const totalPaidWithAdvance = totalPaid + (newOrder.advanceAmount || 0);
+    
     res.json({ 
       success: true, 
       order: newOrder,
-      message: `Order created successfully. Total paid: ₹${totalPaid.toLocaleString()}`
+      message: `Order created successfully. Total due: ₹${totalDue.toLocaleString()} (including advance: ₹${newOrder.advanceAmount || 0})`
     });
   } catch (err) {
     console.error('Order save error:', err);
@@ -600,6 +609,7 @@ router.get('/summary/daily', async (req, res) => {
     const summary = {
       totalOrders: orders.length,
       totalRevenue: orders.reduce((sum, order) => sum + order.grandTotal, 0),
+      totalAdvanceAmount: orders.reduce((sum, order) => sum + (order.advanceAmount || 0), 0), // ADDED: Sum of advance amounts
       paymentMethods: {},
       chitSettlements: orders.filter(order => 
         order.paymentMethods?.some(p => p.method === 'Chit Settlement')

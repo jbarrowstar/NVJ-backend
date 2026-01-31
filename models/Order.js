@@ -62,6 +62,7 @@ const orderSchema = new mongoose.Schema({
   subtotal: Number,
   discount: Number,
   amountAfterDiscount: Number,
+  advanceAmount: { type: Number, default: 0 }, // ADDED: Advance amount field
   extraCharges: Number,
   extraGoldAmount: Number,
   chitGoldGST: Number,
@@ -110,9 +111,10 @@ orderSchema.virtual('totalPaid').get(function() {
   return this.paymentMethods.reduce((total, payment) => total + payment.amount, 0);
 });
 
-// Virtual for balance (due or change)
+// Virtual for balance after advance (due or change)
 orderSchema.virtual('balance').get(function() {
-  return this.grandTotal - this.totalPaid;
+  const totalDue = this.grandTotal + (this.advanceAmount || 0);
+  return totalDue - this.totalPaid;
 });
 
 // Ensure virtual fields are serialized when converted to JSON
