@@ -5,9 +5,9 @@ const productSchema = new mongoose.Schema({
   sku: { type: String, required: true, unique: true, index: true, trim: true },
   category: { type: String, trim: true, default: '' },
   metal: { type: String, enum: ['gold', 'silver'], required: true },
-  weight: { type: Number, default: 0 }, // metal weight in grams - CHANGED TO NUMBER
-  stoneWeight: { type: Number, default: 0 }, // stone weight in grams - CHANGED TO NUMBER
-  netWeight: { type: Number, default: 0 }, // total weight = metal + stone in grams - CHANGED TO NUMBER
+  weight: { type: Number, default: 0 }, // metal weight in grams
+  stoneWeight: { type: Number, default: 0 }, // stone weight in grams
+  netWeight: { type: Number, default: 0 }, // total weight = metal + stone in grams
   purity: { type: String, trim: true, default: '' },  // e.g. "22K"
   makingCharges: { type: Number, default: 0, min: 0 },
   wastage: { type: Number, default: 0, min: 0 }, // percent
@@ -19,7 +19,7 @@ const productSchema = new mongoose.Schema({
   available: { type: Boolean, default: true },
 }, { timestamps: true });
 
-// Calculate net weight before saving
+// Calculate net weight before saving - FIXED: Store as Number, not String
 productSchema.pre('save', function(next) {
   // Trim text fields
   if (this.name) this.name = String(this.name).trim();
@@ -27,25 +27,40 @@ productSchema.pre('save', function(next) {
   if (this.category) this.category = String(this.category).trim();
   
   // Calculate net weight (metal weight + stone weight)
+  // FIX: Remove .toFixed(2) to keep as Number, or wrap in Number()
   const metalWeight = parseFloat(this.weight || '0') || 0;
   const stoneWeight = parseFloat(this.stoneWeight || '0') || 0;
-  this.netWeight = (metalWeight + stoneWeight).toFixed(2);
+  this.netWeight = metalWeight + stoneWeight; // Store as Number
   
   next();
 });
 
-// Also calculate net weight before updating
+// Also calculate net weight before updating - FIXED: Store as Number, not String
 productSchema.pre('findOneAndUpdate', function(next) {
   const update = this.getUpdate();
+  
+  // Get metal and stone weight values
+  let metalWeight = 0;
+  let stoneWeight = 0;
+  
   if (update.$set) {
-    const metalWeight = parseFloat(update.$set.weight || '0') || 0;
-    const stoneWeight = parseFloat(update.$set.stoneWeight || '0') || 0;
-    update.$set.netWeight = (metalWeight + stoneWeight).toFixed(2);
+    metalWeight = parseFloat(update.$set.weight || update.weight || '0') || 0;
+    stoneWeight = parseFloat(update.$set.stoneWeight || update.stoneWeight || '0') || 0;
   } else {
-    const metalWeight = parseFloat(update.weight || '0') || 0;
-    const stoneWeight = parseFloat(update.stoneWeight || '0') || 0;
-    update.netWeight = (metalWeight + stoneWeight).toFixed(2);
+    metalWeight = parseFloat(update.weight || '0') || 0;
+    stoneWeight = parseFloat(update.stoneWeight || '0') || 0;
   }
+  
+  // Calculate net weight as Number
+  const netWeight = metalWeight + stoneWeight;
+  
+  // Update the netWeight field
+  if (update.$set) {
+    update.$set.netWeight = netWeight;
+  } else {
+    update.netWeight = netWeight;
+  }
+  
   next();
 });
 

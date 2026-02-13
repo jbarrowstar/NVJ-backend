@@ -222,7 +222,7 @@ router.post('/', async (req, res) => {
 // GET /api/orders
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 50, customer, date, paymentMethod } = req.query;
+    const { page = 1, limit = Number.MAX_SAFE_INTEGER, customer, date, paymentMethod } = req.query;
     
     let query = {};
     
